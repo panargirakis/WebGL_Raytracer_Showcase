@@ -1,4 +1,4 @@
-var program;
+let program;
 
 let rayX = 0.0;
 let rayY = 0.0;
@@ -85,6 +85,8 @@ function render() {
     );
 
     updateEye();
+
+
 
     gl.aPosition = gl.getAttribLocation(program, "aPosition");
     gl.enableVertexAttribArray(gl.aPosition);

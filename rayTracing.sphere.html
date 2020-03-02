@@ -133,7 +133,8 @@
             rayTracer.color = color;
 
             //Reflected ray
-            vec3 reflection = refract(ray.direction, surfaceNormal, 0.95); //2.0 * dot(-ray.direction, surfaceNormal) * surfaceNormal + ray.direction;
+//            vec3 reflection = refract(ray.direction, surfaceNormal, 0.95); //2.0 * dot(-ray.direction, surfaceNormal) * surfaceNormal + ray.direction;
+            vec3 reflection = 2.0 * dot(-ray.direction, surfaceNormal) * surfaceNormal + ray.direction;
             reflectionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
             reflectionRay.direction = reflection;
             rayTracer.reflectedRay = reflectionRay;
@@ -149,6 +150,7 @@
         initialize();
         RayTracerOutput mainRay = getRay(rays[0], light[0]);
         RayTracerOutput reflectionRay = getRay(mainRay.reflectedRay, light[0]);
+        // modify so that it is not just a sum and takes into account the properties of the surface. Perfect mirror? Only kind of reflective?
         gl_FragColor = vec4(mainRay.color + reflectionRay.color, 1.0);
         //gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
    }
