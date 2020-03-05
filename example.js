@@ -1,7 +1,7 @@
 let program;
 
 let rayX = 0.0;
-let rayY = 0.0;
+let rayY = 0.4;
 let incChangeEye = 0.02;
 
 let id;
@@ -21,7 +21,7 @@ function main()
         return;
     }
 
-    program = initShaders(gl, "vshader", "fshader");
+    program = initShaders(gl, "vshader", "fshader1");
     gl.useProgram(program);
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
