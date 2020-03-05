@@ -106,7 +106,7 @@
             planes[0].normal = vec3(0, 0, 1);
             planes[0].color = vec3(0.0, 0.5, 0.5);
             planes[0].refractiveInd = 1.0;
-            planes[0].reflectiveness = 0.0;  // ambient, diffuse, specular, shinyness
+            planes[0].reflectiveness = 0.2;  // ambient, diffuse, specular, shinyness
             planes[0].transparency = 1.0;
 
             // Create ray
@@ -267,7 +267,9 @@
                 reflectionRay.origin = surfacePoint + 0.0001 * surfaceNormal;
                 reflectionRay.direction = reflection;
                 rayTracer.reflectedRay = reflectionRay;
-                rayTracer.reflectedRayIntensity = reflectivity;
+                // the intensity depends on the reflectivity of the material AND the angle the ray is hitting the surface
+                rayTracer.reflectedRayIntensity = reflectivity * max(dot(ray.direction, -surfaceNormal), 0.0);
+
 
                 // specular highlight
                 float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
