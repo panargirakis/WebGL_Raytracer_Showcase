@@ -215,7 +215,7 @@
                     else {
                         color = colorOfSphere * (ambience + ((1.0 - ambience) * max(0.0, dot(surfaceNormal, lightSource)))); }
                 }
-                else {
+                else { // if drawing a plane
                     surfacePoint = cameraSource + (minT * cameraDirection);
                     surfaceNormal = normalize(planeToShow.normal);
                     // if there is an object covering the light source
@@ -251,7 +251,7 @@
         }
 
         void main() {
-            const int reflectionDepth = 2;
+            const int reflectionDepth = 3;
 
             initialize();
             // RayTracerOutput mainRay = getRay(rays[0], light[0]);
@@ -259,16 +259,23 @@
             // TODO: modify so that it is not just a sum and takes into account the properties of the surface. Perfect
             // mirror? Only kind of reflective?
 
-            vec3 finalColor = vec3(0, 0, 0);
+            vec3 reflectionColor = vec3(0, 0, 0);
+            vec3 refractionColor = vec3(0, 0, 0);
+            vec3 mainRayColor;
+
             RayTracerOutput recursiveRays[reflectionDepth];
             recursiveRays[0] = getRay(rays[0], light[0]);
-            finalColor += recursiveRays[0].color;
+            mainRayColor = recursiveRays[0].color;
 
-            for (int i = 1; i < reflectionDepth; i++) { // go through every ray at each pixel
+            for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
-                finalColor += recursiveRays[i].color;
+                reflectionColor += recursiveRays[i].color;
             }
-            gl_FragColor = vec4(finalColor, 1.0);
+            for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
+                refractionColor += recursiveRays[i].color;
+            }
+            gl_FragColor = vec4(mainRayColor + reflectionColor + refractionColor, 1.0);
         }
     </script>
 
