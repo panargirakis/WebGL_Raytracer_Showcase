@@ -74,32 +74,32 @@
             // Create spheres
             spheres[0].center = vec3(0.7, 0.7, -1.0);// location of sphere
             spheres[0].radius = 0.4;
-            spheres[0].color = vec3(0.0, 1.0, 0.0);// color red
+            spheres[0].color = vec3(0.4, 1.0, 0.2);// color red
             spheres[0].refractiveInd = 2.47;
             spheres[0].transparency = 1.0;
             spheres[0].reflectiveness = 0.7;  // ambient, diffuse, specular, shinyness
 
             spheres[1].center = vec3(-0.7, 0.7, -1.0);
             spheres[1].radius = 0.4;
-            spheres[1].color = vec3(1.0, 1.0, 0.0);
+            spheres[1].color = vec3(1.0, 1.0, 0.2);
             spheres[1].refractiveInd = 1.1;
             spheres[1].transparency = 1.0;
             spheres[1].reflectiveness = 1.0;  // ambient, diffuse, specular, shinyness
 
             spheres[2].center = vec3(0.7, -0.7, -1.0);
             spheres[2].radius = 0.4;
-            spheres[2].color = vec3(0.0, 0.0, 1.0);
+            spheres[2].color = vec3(0.2, 0.2, 1.0);
             spheres[2].refractiveInd = 1.1;
             spheres[2].transparency = 1.0;
             spheres[2].reflectiveness = 1.0;  // ambient, diffuse, specular, shinyness
 
             spheres[3].center = vec3(-0.7, -0.7, -1.0);
             spheres[3].radius = 0.4;
-            spheres[3].color = vec3(1.0, 0.0, 0.0);
+            spheres[3].color = vec3(1.0, 0.2, 0.2);
 //            spheres[3].color = vec3(0, 0, 0);
             spheres[3].refractiveInd = 1.517;
             spheres[3].transparency = 1.0;
-            spheres[3].reflectiveness = 0.9;  // ambient, diffuse, specular, shinyness
+            spheres[3].reflectiveness = 1.0;  // ambient, diffuse, specular, shinyness
 
             planes[0].origin = vec3(0, 0, -5);
             //planes[0].point = vec3(0, 1, -1);
@@ -260,9 +260,10 @@
 
 
                 // specular highlight
-                float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
-                vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
-                color += specular * reflectivity;
+                if (!objectIsInShadow) {
+                    float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
+                    vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
+                    color += specular * reflectivity;}
 
                 vec3 refraction = refract(ray.direction, surfaceNormal, 1.0 / refrInd);
                 refractionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
@@ -281,7 +282,7 @@
         }
 
         void main() {
-            const int reflectionDepth = 3;
+            const int reflectionDepth = 4;
 
             initialize();
 
@@ -296,13 +297,14 @@
 
             for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
-                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+//                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+                reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
             }
             for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
-                refractionColor += recursiveRays[i].color * recursiveRays[i].refractedRayIntensity;
+                refractionColor += recursiveRays[i-1].refractedRayIntensity * recursiveRays[i].color;
             }
-            gl_FragColor = vec4(mainRayColor + reflectionColor + 0.15 * refractionColor, 1.0);
+            gl_FragColor = vec4(mainRayColor + reflectionColor + refractionColor, 1.0);
         }
     </script>
 
@@ -367,7 +369,7 @@
             spheres[0].center = vec3(0.42, 0.4, -1.0);// location of sphere
             spheres[0].radius = 0.4;
             spheres[0].color = vec3(1.0, 0.0, 0.0);// color red
-            spheres[0].refractiveInd = 2.47;
+            spheres[0].refractiveInd = 1.01;
             spheres[0].transparency = 0.0;
             spheres[0].reflectiveness = 0.7;  // ambient, diffuse, specular, shinyness
 
@@ -380,9 +382,9 @@
 
             planes[0].origin = vec3(0, 0, 0);
             planes[0].normal = vec3(0, 1.0, 0);
-            planes[0].color = vec3(0.0, 0.5, 0.5);
+            planes[0].color = vec3(0.3, 0.5, 0.5);
             planes[0].refractiveInd = 1.0;
-            planes[0].reflectiveness = 0.4;
+            planes[0].reflectiveness = 1.0;
             planes[0].transparency = 0.0;
 
             // Create ray
@@ -535,8 +537,8 @@
                 rayTracer.reflectedRayIntensity = reflectivity * max(dot(ray.direction, -surfaceNormal), 0.0);
 
 
-                // specular highlight
-                if (!objectIsInShadow) {
+                // specular highlight (only for sphere)
+                if (!objectIsInShadow && drawSphere) {
                     float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
                     vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
                     color += specular * reflectivity;}
@@ -558,8 +560,8 @@
         }
 
         void main() {
-//            const int reflectionDepth = 100;
-            const int reflectionDepth = 4;
+//            const int reflectionDepth = 60;
+            const int reflectionDepth = 6;
 
             initialize();
 
@@ -574,13 +576,14 @@
 
             for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
-                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+//                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+                reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
             }
             for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
-                refractionColor += recursiveRays[i].color * recursiveRays[i].refractedRayIntensity;
+                refractionColor += recursiveRays[i-1].refractedRayIntensity * recursiveRays[i].color;
             }
-            gl_FragColor = vec4(mainRayColor + reflectionColor + 0.15 * refractionColor, 1.0);
+            gl_FragColor = vec4(mainRayColor + reflectionColor +  refractionColor, 1.0);
         }
     </script>
 

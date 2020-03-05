@@ -1,7 +1,7 @@
 let program;
 
 let rayX = 0.0;
-let rayY = 0.4;
+let rayY = 0.5;
 let incChangeEye = 0.02;
 
 let id;
@@ -52,6 +52,20 @@ function handleKeys() {
             }
             case "ArrowDown": {
                 rayY -= incChangeEye;
+                break;
+            }
+            case "1": {
+                program = initShaders(gl, "vshader", "fshader1");
+                gl.useProgram(program);
+                rayY = 0.5;
+                rayX = 0.0;
+                break;
+            }
+            case "2": {
+                program = initShaders(gl, "vshader", "fshader2");
+                rayY = 0.0;
+                rayX = 0.0;
+                gl.useProgram(program);
                 break;
             }
         }
