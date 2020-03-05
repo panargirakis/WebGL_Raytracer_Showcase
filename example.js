@@ -93,5 +93,5 @@ function render() {
     gl.vertexAttribPointer(gl.aPosition, 3, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    id = requestAnimationFrame(render);
+    // id = requestAnimationFrame(render);
 }

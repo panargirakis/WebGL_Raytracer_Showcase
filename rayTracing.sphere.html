@@ -24,6 +24,9 @@
             vec3 center;
             float radius;
             vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
         };
 
         struct Plane {
@@ -31,6 +34,9 @@
             vec3 point;
             vec3 normal;
             vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
         };
 
         struct Ray {
@@ -47,7 +53,9 @@
 
         struct RayTracerOutput {
             Ray reflectedRay;
+            float reflectedRayIntensity;
             Ray refractedRay;
+            float refractedRayIntensity;
             vec3 color;
         };
 
@@ -67,23 +75,39 @@
             spheres[0].center = vec3(1, 1, -1.0);// location of sphere
             spheres[0].radius = 0.4;
             spheres[0].color = vec3(1.0, 0.0, 0.0);// color red
+            spheres[0].refractiveInd = 2.47;
+            spheres[0].transparency = 1.0;
+            spheres[0].reflectiveness = 0.2;  // ambient, diffuse, specular, shinyness
 
             spheres[1].center = vec3(-1.0, 1.0, -1.0);
             spheres[1].radius = 0.4;
             spheres[1].color = vec3(0.0, 1.0, 0.0);
+            spheres[1].refractiveInd = 1.1;
+            spheres[1].transparency = 1.0;
+            spheres[1].reflectiveness = 1.0;  // ambient, diffuse, specular, shinyness
 
             spheres[2].center = vec3(1.0, -1.0, -1.0);
             spheres[2].radius = 0.4;
             spheres[2].color = vec3(0.0, 0.0, 1.0);
+            spheres[2].refractiveInd = 1.1;
+            spheres[2].transparency = 1.0;
+            spheres[2].reflectiveness = 0.2;  // ambient, diffuse, specular, shinyness
 
             spheres[3].center = vec3(-1.0, -1.0, -1.0);
             spheres[3].radius = 0.4;
             spheres[3].color = vec3(0.5, 0.0, 0.5);
+//            spheres[3].color = vec3(0, 0, 0);
+            spheres[3].refractiveInd = 1.517;
+            spheres[3].transparency = 1.0;
+            spheres[3].reflectiveness = 1.0;  // ambient, diffuse, specular, shinyness
 
             planes[0].origin = vec3(0, 0, -5);
             //planes[0].point = vec3(0, 1, -1);
             planes[0].normal = vec3(0, 0, 1);
             planes[0].color = vec3(0.0, 0.5, 0.5);
+            planes[0].refractiveInd = 1.0;
+            planes[0].reflectiveness = 0.0;  // ambient, diffuse, specular, shinyness
+            planes[0].transparency = 1.0;
 
             // Create ray
             rays[0].origin = vec3(lightx, lighty, focalLength);// emission point is the same distance back as the focal
@@ -93,7 +117,8 @@
 
             // Create Light source
             light[0].position = vec3(0.0, 0.0, 0.9);
-            light[0].ambience = 0.3;
+            light[0].ambience = 0.6;
+            light[0].specular = vec3(1,1,1);
         }
 
         float checkIntersectSphere(Sphere sphere, Ray ray) {
@@ -132,6 +157,7 @@
         }
 
         RayTracerOutput getRay(Ray ray, Light light) {
+            const vec3 white = vec3(1, 1, 1);
 
             const float veryLargeNumber = 100000.0;
             const int numOfSpheres = 4;
@@ -200,9 +226,16 @@
             vec3 surfacePoint;
             vec3 surfaceNormal;
 
+            float refrInd = 1.0;
+            float reflectivity = 0.0;
+            float transparency = 0.0;
+
             if (minT > 0.0 && minT < veryLargeNumber) {
 
                 if (drawSphere) {
+                    refrInd = sphereToShow.refractiveInd;
+                    reflectivity = sphereToShow.reflectiveness;
+                    transparency = sphereToShow.transparency;
 
                     vec3 sphereCenter = sphereToShow.center;
                     vec3 colorOfSphere = sphereToShow.color;
@@ -213,34 +246,41 @@
                     objectIsInShadow) {
                         color = colorOfSphere * ambience; }
                     else {
-                        color = colorOfSphere * (ambience + ((1.0 - ambience) * max(0.0, dot(surfaceNormal, lightSource)))); }
+                        float dotProduct = dot(surfaceNormal, lightSource);
+                        color = colorOfSphere * (ambience + ((1.0 - ambience) * max(0.0, dotProduct)));
+                    }
                 }
                 else { // if drawing a plane
+                    refrInd = planeToShow.refractiveInd;
+                    reflectivity = planeToShow.reflectiveness;
+                    transparency = planeToShow.transparency;
+
                     surfacePoint = cameraSource + (minT * cameraDirection);
                     surfaceNormal = normalize(planeToShow.normal);
-                    // if there is an object covering the light source
-                    // color = colorOfPlane * ambiance
-                    // else
                     if (objectIsInShadow) {
                         color = planeToShow.color * ambience; }
                     else {
                         color = planeToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(surfaceNormal, lightSource)))); }
                 }
 
-                rayTracer.color = color;
-
-                //Reflected ray TODO: add reflection -and- refraction
-                // TODO: add recursion
-                // vec3 reflection = refract(ray.direction, surfaceNormal, 0.95);
                 vec3 reflection = reflect(ray.direction, surfaceNormal);
                 reflectionRay.origin = surfacePoint + 0.0001 * surfaceNormal;
                 reflectionRay.direction = reflection;
                 rayTracer.reflectedRay = reflectionRay;
+                rayTracer.reflectedRayIntensity = reflectivity;
 
-                vec3 refraction = refract(ray.direction, surfaceNormal, 0.98);
+                // specular highlight
+                float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
+                vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
+                color += specular * reflectivity;
+
+                vec3 refraction = refract(ray.direction, surfaceNormal, 1.0 / refrInd);
                 refractionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
                 refractionRay.direction = refraction;
                 rayTracer.refractedRay = refractionRay;
+                rayTracer.refractedRayIntensity = transparency;
+
+                rayTracer.color = color;
 
             }
             else {
@@ -263,19 +303,20 @@
             vec3 refractionColor = vec3(0, 0, 0);
             vec3 mainRayColor;
 
+            // set main ray
             RayTracerOutput recursiveRays[reflectionDepth];
             recursiveRays[0] = getRay(rays[0], light[0]);
             mainRayColor = recursiveRays[0].color;
 
             for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
-                reflectionColor += recursiveRays[i].color;
+                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
             }
             for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
                 recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
-                refractionColor += recursiveRays[i].color;
+                refractionColor += recursiveRays[i].color * recursiveRays[i].refractedRayIntensity;
             }
-            gl_FragColor = vec4(mainRayColor + reflectionColor + refractionColor, 1.0);
+            gl_FragColor = vec4(mainRayColor + reflectionColor + 0.15 * refractionColor, 1.0);
         }
     </script>
 
