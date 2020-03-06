@@ -1,6 +1,6 @@
 # Structure and implementation notes
 
-The program starts by initializing the canvas and the webgl elements. By default, image number 1 is rendered. There are 3 different fragment shaders, one for each image. Only one vertex shader is used for all images. The main() function in the fragment shaders calls the initialize() function once and then the getRay() function for the main ray of each pixel and all subsequent reflection and refraction rays. The getRay() function calculates the color of each ray and the direction and intensity of reflection/refraction rays. getRay() calls getIntersectionSphere() and getIntersectionPlane() to calculate ray intersections.
+The program starts by initializing the canvas and the webgl elements. By default, image number 1 is rendered. There are 3 different fragment shaders, one for each image. Only one vertex shader is used for all images. The main() function in the fragment shaders calls the initialize() function once. Then, it calls the getRay() function for the primary ray of each pixel and all subsequent reflections and refractions. The getRay() function calculates the color of each ray and the direction and intensity of reflection/refraction rays. getRay() calls getIntersectionSphere() and getIntersectionPlane() to calculate ray intersections.
 
 ## The program is comprised of 2 code files
 
@@ -31,12 +31,14 @@ To support refractions, each object has a transparency and refractive index coef
 Two different modes of reflection/refraction color calculation are implemented in the main() function of each shader. The mode is chosen by commenting/uncommenting the corresponding line in code.
 
 Mode 1:
+
 **The color of a reflected ray is calculated irrespectively of the color of the object it bounces on.** This is the naive implementation. It implies that a purely red object, for example, will reflect all colors equally well.
 
-`reflectionColor += recursiveRays[i].color * recursiveRays[i-1].reflectedRayIntensity;`
+`reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;`
 
 Mode 2:
-**The color of a reflected ray is affected by the color of the object it bounces on.** This is the default for images 1,2. It implies that a black object will produce no reflections, a purely red object will only reflect red. In other words, the color of the reflecting object is multiplied with the color of the reflected ray.
+
+**The color of a reflected ray is affected by the color of the object it bounces off of.** This is the default for images 1,2. It implies that a black object will produce no reflections, a purely red object will only reflect red. In other words, the color of the reflecting object is multiplied with the color of the reflected ray.
 
 `reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;`
 
