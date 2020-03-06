@@ -22,7 +22,7 @@ Open the rayTracing.html file using a WebGL compatible browser.
     ArrowLEFT: increment camera x position in the negative direction
     ArrowRIGHT: increment camera x position in the positive direction
 
-# Other Extra Credit features
+# Extra Credit feature - Refractions
 
 Refractions are supported. Refracted rays change direction only once when intersecting an object but are traced for multiple object intersections. To illustrate the feature, an additional refractive sphere is added in image 3. This sphere is the one all the way to the right of the canvas.
 To support refractions, each object has a transparency and refractive index coefficient. The refractive index is passed into the refract() function.
