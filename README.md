@@ -32,10 +32,12 @@ Two different modes of reflection/refraction color calculation are implemented i
 
 Mode 1:
 **The color of a reflected ray is calculated irrespectively of the color of the object it bounces on.** This is the naive implementation. It implies that a purely red object, for example, will reflect all colors equally well.
+
 `reflectionColor += recursiveRays[i].color * recursiveRays[i-1].reflectedRayIntensity;`
 
 Mode 2:
 **The color of a reflected ray is affected by the color of the object it bounces on.** This is the default for images 1,2. It implies that a black object will produce no reflections, a purely red object will only reflect red. In other words, the color of the reflecting object is multiplied with the color of the reflected ray.
+
 `reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;`
 
 
