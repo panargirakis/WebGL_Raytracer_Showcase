@@ -40,18 +40,22 @@ function handleKeys() {
         switch (key) {
             case "ArrowRight": {
                 rayX += incChangeEye;
+                render();
                 break;
             }
             case "ArrowLeft": {
                 rayX -= incChangeEye;
+                render();
                 break;
             }
             case "ArrowUp": {
                 rayY += incChangeEye;
+                render();
                 break;
             }
             case "ArrowDown": {
                 rayY -= incChangeEye;
+                render();
                 break;
             }
             case "1": {
@@ -59,6 +63,7 @@ function handleKeys() {
                 gl.useProgram(program);
                 rayY = 0.5;
                 rayX = 0.0;
+                render();
                 break;
             }
             case "2": {
@@ -66,6 +71,15 @@ function handleKeys() {
                 rayY = 0.0;
                 rayX = 0.0;
                 gl.useProgram(program);
+                render();
+                break;
+            }
+            case "3": {
+                program = initShaders(gl, "vshader", "fshader3");
+                rayY = 1.0;
+                rayX = 0.0;
+                gl.useProgram(program);
+                render();
                 break;
             }
         }
