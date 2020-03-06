@@ -1,3 +1,8 @@
+// EXTRA CREDIT:
+//  refractions are supported. See the rayTracing.html file and README.md file.
+//  The arrow keys are used for changing the x,y coordinates of the camera.
+//  Soft reflections. Reflections are affected by the angle of intersection.
+
 let program;
 
 let rayX = 0.0;

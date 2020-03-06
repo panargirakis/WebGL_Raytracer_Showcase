@@ -22,10 +22,12 @@ Open the rayTracing.html file using a WebGL compatible browser.
     ArrowLEFT: increment camera x position in the negative direction
     ArrowRIGHT: increment camera x position in the positive direction
 
-# Extra Credit feature - Refractions
+# Extra Credit Features
 
 Refractions are supported. Refracted rays change direction only once when intersecting an object but are traced for multiple object intersections. To illustrate the feature, an additional refractive sphere is added in image 3. This sphere is the one all the way to the right of the canvas.
 To support refractions, each object has a transparency and refractive index coefficient. The refractive index is passed into the refract() function.
+
+In addition, soft reflections are supported. In other words, a reflected ray which arrives perpendicular to a surface has greater intensity than a ray which comes at a very wide angle. This effect is very noticeable in image 1 where the reflection of the pane gets softer in the y-axis midpoint of the spheres.
 
 # Notes on Color
 Two different modes of reflection/refraction color calculation are implemented in the main() function of each shader. The mode is chosen by commenting/uncommenting the corresponding line in code.
