@@ -1,7 +1,7 @@
 let program;
 
 let rayX = 0.0;
-let rayY = 0.0;
+let rayY = 0.5;
 let incChangeEye = 0.02;
 
 let id;
@@ -21,7 +21,7 @@ function main()
         return;
     }
 
-    program = initShaders(gl, "vshader", "fshader");
+    program = initShaders(gl, "vshader", "fshader1");
     gl.useProgram(program);
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
@@ -40,18 +40,46 @@ function handleKeys() {
         switch (key) {
             case "ArrowRight": {
                 rayX += incChangeEye;
+                render();
                 break;
             }
             case "ArrowLeft": {
                 rayX -= incChangeEye;
+                render();
                 break;
             }
             case "ArrowUp": {
                 rayY += incChangeEye;
+                render();
                 break;
             }
             case "ArrowDown": {
                 rayY -= incChangeEye;
+                render();
+                break;
+            }
+            case "1": {
+                program = initShaders(gl, "vshader", "fshader1");
+                gl.useProgram(program);
+                rayY = 0.5;
+                rayX = 0.0;
+                render();
+                break;
+            }
+            case "2": {
+                program = initShaders(gl, "vshader", "fshader2");
+                rayY = 0.0;
+                rayX = 0.0;
+                gl.useProgram(program);
+                render();
+                break;
+            }
+            case "3": {
+                program = initShaders(gl, "vshader", "fshader3");
+                rayY = 1.0;
+                rayX = 0.0;
+                gl.useProgram(program);
+                render();
                 break;
             }
         }
@@ -93,5 +121,5 @@ function render() {
     gl.vertexAttribPointer(gl.aPosition, 3, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    id = requestAnimationFrame(render);
+    // id = requestAnimationFrame(render);
 }

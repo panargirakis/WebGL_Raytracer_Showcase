@@ -1,177 +1,895 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
+    <meta charset="utf-8"/>
     <title>WebGL Example File</title>
 
 
-<script id="vshader" type="x-shader/x-vertex">
-   attribute vec3 aPosition;
-   varying   vec3 vPosition;
-   void main() {
-      gl_Position = vec4(aPosition, 1.0);
-      vPosition = aPosition;
-   }
-</script>
-
-<script id="fshader" type="x-shader/x-fragment">
-    uniform mediump float lightx;
-    uniform mediump float lighty;
-    precision mediump float;
-    varying vec3 vPosition;
-
-    struct Sphere {
-        vec3 center;
-        float radius;
-        vec3 color;
-    };
-
-    struct Ray {
-        vec3 origin;
-        vec3 direction;
-    };
-
-    struct Light {
-        vec3 position;
-        float ambience;
-        vec3 specular;
-        vec3 diffuse;
-    };
-
-    struct RayTracerOutput {
-        Ray reflectedRay;
-        vec3 color;
-    };
-
-    Sphere spheres[4];
-    Ray rays[1];
-    Light light[1];
-
-    void initialize() {
-        float x = vPosition.x;
-        float y = vPosition.y;
-        float z = vPosition.z;
-        float focalLength = 2.0;
-        vec3 color = vec3(0.0, 0.0, 0.0);
-
-        // Create spheres
-        spheres[0].center = vec3(1, 1, -1.0); // location of sphere
-        spheres[0].radius = 0.4;
-        spheres[0].color = vec3(1.0, 0.0, 0.0); // color red
-
-        spheres[1].center = vec3(-1.0, 1.0, -1.0);
-        spheres[1].radius = 0.4;
-        spheres[1].color = vec3(0.0, 1.0, 0.0);
-
-        spheres[2].center = vec3(1.0, -1.0, -1.0);
-        spheres[2].radius = 0.4;
-        spheres[2].color = vec3(0.0, 0.0, 1.0);
-
-        spheres[3].center = vec3(-1.0, -1.0, -1.0);
-        spheres[3].radius = 0.4;
-        spheres[3].color = vec3(0.5, 0.0, 0.5);
-
-        // Create ray
-        rays[0].origin = vec3(lightx, lighty, focalLength); // emission point is the same distance back as the focal length
-        rays[0].direction = normalize(vec3(x, y, -focalLength)); // the direction will be in the direction of this specific pixel we're looking at
-
-        // Create Light source
-        light[0].position = vec3(0.0, 0.0, 0.9);
-        light[0].ambience = 0.1;
-    }
-
-    float checkIntersectSphere(Sphere sphere, Ray ray) {
-        vec3 sphereCenter = sphere.center;
-        float radius = sphere.radius;
-        vec3 cameraSource = ray.origin;
-        vec3 cameraDirection = ray.direction;
-
-        vec3 distanceFromCenter = (cameraSource - sphereCenter);
-        float B = 2.0 * dot(cameraDirection, distanceFromCenter);
-        float C = dot(distanceFromCenter, distanceFromCenter) - pow(radius, 2.0);
-        float delta = pow(B, 2.0) - 4.0 * C;
-        float t = 0.0;
-        if (delta > 0.0) { // i know i have an intersection
-            float sqRoot = sqrt(delta);
-            float t1 = (-B + sqRoot) / 2.0;
-            float t2 = (-B - sqRoot) / 2.0;
-            t = min(t1, t2);
+    <script id="vshader" type="x-shader/x-vertex">
+        attribute vec3 aPosition;
+        varying   vec3 vPosition;
+        void main() {
+            gl_Position = vec4(aPosition, 1.0);
+            vPosition = aPosition;
         }
-        if (delta == 0.0) {
-            t = -B / 2.0;
+    </script>
+
+    <script id="fshader2" type="x-shader/x-fragment">
+        uniform mediump float lightx;
+        uniform mediump float lighty;
+        precision mediump float;
+        varying vec3 vPosition;
+
+        struct Sphere {
+            vec3 center;
+            float radius;
+            vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
+        };
+
+        struct Plane {
+            vec3 origin;
+            vec3 point;
+            vec3 normal;
+            vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
+        };
+
+        struct Ray {
+            vec3 origin;
+            vec3 direction;
+        };
+
+        struct Light {
+            vec3 position;
+            float ambience;
+            vec3 specular;
+            vec3 diffuse;
+        };
+
+        struct RayTracerOutput {
+            Ray reflectedRay;
+            float reflectedRayIntensity;
+            Ray refractedRay;
+            float refractedRayIntensity;
+            vec3 color;
+        };
+
+        Sphere spheres[4];
+        Ray rays[1];
+        Light light[1];
+        Plane planes[1];
+
+        void initialize() {
+            float x = vPosition.x;
+            float y = vPosition.y;
+            float z = vPosition.z;
+            float focalLength = 2.0;
+            vec3 color = vec3(0.0, 0.0, 0.0);
+
+            // Create spheres
+            spheres[0].center = vec3(0.7, 0.7, -1.0);// location of sphere
+            spheres[0].radius = 0.4;
+            spheres[0].color = vec3(0.4, 1.0, 0.2);
+            spheres[0].refractiveInd = 2.47;
+            spheres[0].transparency = 1.0;
+            spheres[0].reflectiveness = 1.0;
+
+            spheres[1].center = vec3(-0.7, 0.7, -1.0);
+            spheres[1].radius = 0.4;
+            spheres[1].color = vec3(0.9, 0.9, 0.3);
+            spheres[1].refractiveInd = 1.1;
+            spheres[1].transparency = 1.0;
+            spheres[1].reflectiveness = 1.0;
+
+            spheres[2].center = vec3(0.7, -0.7, -1.0);
+            spheres[2].radius = 0.4;
+            spheres[2].color = vec3(0.3, 0.3, 1.0);
+            spheres[2].refractiveInd = 1.1;
+            spheres[2].transparency = 1.0;
+            spheres[2].reflectiveness = 1.0;
+
+            spheres[3].center = vec3(-0.7, -0.7, -1.0);
+            spheres[3].radius = 0.4;
+            spheres[3].color = vec3(1.0, 0.3, 0.3);
+            spheres[3].refractiveInd = 1.517;
+            spheres[3].transparency = 1.0;
+            spheres[3].reflectiveness = 1.0;
+
+            // Create ray
+            rays[0].origin = vec3(lightx, lighty, focalLength);// emission point is the same distance back as the focal
+            // length
+            rays[0].direction = normalize(vec3(x, y, -focalLength));// the direction will be in the direction of this
+            // specific pixel we're looking at
+
+            // Create Light source
+            light[0].position = vec3(0.0, 0.0, 0.9);
+            light[0].ambience = 0.6;
+            light[0].specular = vec3(1,1,1);
         }
 
-        return t;
-    }
+        float checkIntersectSphere(Sphere sphere, Ray ray) {
 
-     RayTracerOutput getRay(Ray ray, Light light) {
-
-        const int numOfSpheres = 4;
-        RayTracerOutput rayTracer;
-        Sphere sphereToShow;
-        vec3 color = vec3(0.0, 0.0, 0.0);
-        float minT = 100000.0;
-        float t = 0.0;
-
-        for (int i=0; i < numOfSpheres; i++) {
-            t = checkIntersectSphere(spheres[i], ray);
-            if (t > 0.0 && t < minT) {
-                minT = t;
-                sphereToShow = spheres[i];
+            vec3 distanceFromCenter = (ray.origin - sphere.center);
+            float B = 2.0 * dot(ray.direction, distanceFromCenter);
+            float C = dot(distanceFromCenter, distanceFromCenter) - pow(sphere.radius, 2.0);
+            float delta = pow(B, 2.0) - 4.0 * C;
+            float t = 0.0;
+            if (delta > 0.0) { // i know i have an intersection
+                float sqRoot = sqrt(delta);
+                float t1 = (-B + sqRoot) / 2.0;
+                float t2 = (-B - sqRoot) / 2.0;
+                t = min(t1, t2);
             }
+            if (delta == 0.0) {
+                t = -B / 2.0;
+            }
+
+            return t;
         }
 
-        if(minT > 0.0 && minT < 100000.0) {
+        float checkIntersectPlane(Plane plane, Ray ray) {
+            float t = 0.0;
 
-            vec3 sphereCenter = sphereToShow.center;
-            vec3 colorOfSphere = sphereToShow.color;
-            vec3 cameraSource = ray.origin;
-            vec3 cameraDirection = ray.direction;
+            float divisor = dot(ray.direction, plane.normal);
+            if (divisor != 0.0) {
+                t = dot(plane.origin - ray.origin, plane.normal) / divisor;
+            }
+
+            return t;
+        }
+
+        RayTracerOutput getRay(Ray ray, Light light) {
+            const vec3 white = vec3(1, 1, 1);
+
+            const float veryLargeNumber = 100000.0;
+            const int numOfSpheres = 4;
+            const int numOfPlanes = 0;
+            RayTracerOutput rayTracer;
+            Sphere sphereToShow;
+            Plane planeToShow;
+            vec3 color = vec3(0.0, 0.0, 0.0);
+            float minTSphere = veryLargeNumber;
+            float minTPlane = veryLargeNumber;
+
+            // calculate which object is being shown
+            for (int i=0; i < numOfSpheres; i++) { // go through all spheres, determine which one is on top
+                float tSphere = 0.0;
+                tSphere = checkIntersectSphere(spheres[i], ray);
+                if (tSphere > 0.0 && tSphere < minTSphere) {
+                    minTSphere = tSphere;
+                    sphereToShow = spheres[i];
+                }
+            }
+            for (int i=0; i < numOfPlanes; i++) { // go through all planes, determine which one is on top
+                float tPlane = 0.0;
+                tPlane = checkIntersectPlane(planes[i], ray);
+                if (tPlane > 0.0 && tPlane < minTPlane) {
+                    minTPlane = tPlane;
+                    planeToShow = planes[i];
+                }
+            }
+
+            bool drawSphere = minTSphere < minTPlane;
+            float minT = drawSphere ? minTSphere : minTPlane;
+
+            // calculate if an object is blocking
+            float minTFromLight = veryLargeNumber;
+            Ray lightRay;
+            lightRay.origin = light.position;
+            lightRay.direction = normalize((ray.origin + minT * ray.direction) - light.position);
+            float tOfPointFromLightSource = drawSphere ? checkIntersectSphere(sphereToShow, lightRay) : checkIntersectPlane(planeToShow, lightRay);
+
+            // clculate minT for any spheres or
+            for (int i=0; i < numOfSpheres; i++) { // go through all spheres, determine which one is on top
+                float tSphere = 0.0;
+                tSphere = checkIntersectSphere(spheres[i], lightRay);
+                if (tSphere > 0.0 && tSphere < minTFromLight) {
+                    minTFromLight = tSphere;
+                }
+            }
+            for (int i=0; i < numOfPlanes; i++) { // go through all planes, determine which one is on top
+                float tPlane = 0.0;
+                tPlane = checkIntersectPlane(planes[i], lightRay);
+                if (tPlane > 0.0 && tPlane < minTFromLight) {
+                    minTFromLight = tPlane;
+                }
+            }
+
+            bool objectIsInShadow = minTFromLight < tOfPointFromLightSource; // determine if object is in shadow
+
             vec3 lightSource = light.position;
             float ambience = light.ambience;
             Ray reflectionRay;
+            Ray refractionRay;
 
-            vec3 surfacePoint = cameraSource + (minT * cameraDirection);
-            vec3 surfaceNormal = normalize(surfacePoint - sphereCenter);
-            color = colorOfSphere * (ambience + ((1.0 - ambience) * max(0.0, dot(surfaceNormal, lightSource))));
-            rayTracer.color = color;
+            vec3 surfacePoint = ray.origin + (minT * ray.direction);;
+            vec3 surfaceNormal;
 
-            //Reflected ray TODO: add reflection -and- refraction
-            // TODO: add recursion
-//            vec3 reflection = refract(ray.direction, surfaceNormal, 0.95); //2.0 * dot(-ray.direction, surfaceNormal) * surfaceNormal + ray.direction;
-            vec3 reflection = reflect(ray.direction, surfaceNormal);
-            reflectionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
-            reflectionRay.direction = reflection;
-            rayTracer.reflectedRay = reflectionRay;
-         }
-         else {
-            rayTracer.color = color;
-         }
+            float refrInd = 1.0;
+            float reflectivity = 0.0;
+            float transparency = 0.0;
 
-        return rayTracer;
-     }
+            if (minT > 0.0 && minT < veryLargeNumber) {
 
-    void main() {
-        const int reflectionDepth = 3;
+                if (drawSphere) {
+                    refrInd = sphereToShow.refractiveInd;
+                    reflectivity = sphereToShow.reflectiveness;
+                    transparency = sphereToShow.transparency;
 
-        initialize();
-//        RayTracerOutput mainRay = getRay(rays[0], light[0]);
-//        RayTracerOutput reflectionRay = getRay(mainRay.reflectedRay, light[0]);
-        // TODO: modify so that it is not just a sum and takes into account the properties of the surface. Perfect mirror? Only kind of reflective?
+                    surfaceNormal = normalize(surfacePoint - sphereToShow.center);
+                    if (
+                    objectIsInShadow) {
+                        color = sphereToShow.color * ambience; }
+                    else {
+                        float dotProduct = dot(surfaceNormal, lightSource);
+                        color = sphereToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(-surfaceNormal, lightRay.direction))));
+                    }
+                }
+                else { // if drawing a plane
+                    refrInd = planeToShow.refractiveInd;
+                    reflectivity = planeToShow.reflectiveness;
+                    transparency = planeToShow.transparency;
 
-        vec3 finalColor = vec3(0, 0, 0);
-        RayTracerOutput recursiveRays[reflectionDepth];
-        recursiveRays[0] = getRay(rays[0], light[0]);
-        finalColor += recursiveRays[0].color;
+                    surfaceNormal = normalize(planeToShow.normal);
+                    if (objectIsInShadow) {
+                        color = planeToShow.color * ambience; }
+                    else {
+                        color = planeToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(-surfaceNormal, lightRay.direction)))); }
+                }
 
-        for (int i = 1; i < reflectionDepth; i++) {
-            recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
-            finalColor += recursiveRays[i].color;
+                vec3 reflection = reflect(ray.direction, surfaceNormal);
+                reflectionRay.origin = surfacePoint + 0.0001 * surfaceNormal;
+                reflectionRay.direction = reflection;
+                rayTracer.reflectedRay = reflectionRay;
+                // the intensity depends on the reflectivity of the material AND the angle the ray is hitting the surface
+                rayTracer.reflectedRayIntensity = reflectivity * max(dot(ray.direction, -surfaceNormal), 0.0);
+
+
+                // specular highlight
+                if (!objectIsInShadow) {
+                    float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
+                    vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
+                    color += specular * reflectivity;}
+
+                vec3 refraction = refract(ray.direction, surfaceNormal, 1.0 / refrInd);
+                refractionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
+                refractionRay.direction = refraction;
+                rayTracer.refractedRay = refractionRay;
+                rayTracer.refractedRayIntensity = transparency;
+
+                rayTracer.color = color;
+
+            }
+            else {
+                rayTracer.color = color;
+            }
+
+            return rayTracer;
         }
-        gl_FragColor = vec4(finalColor, 1.0);
-        //gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-   }
-</script>
+
+        void main() {
+            const int reflectionDepth = 4;
+
+            initialize();
+
+            vec3 reflectionColor = vec3(0, 0, 0);
+            vec3 refractionColor = vec3(0, 0, 0);
+            vec3 mainRayColor;
+
+            // set main ray
+            RayTracerOutput recursiveRays[reflectionDepth];
+            recursiveRays[0] = getRay(rays[0], light[0]);
+            mainRayColor = recursiveRays[0].color;
+
+            for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
+//                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+                reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+            }
+            for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
+                refractionColor += recursiveRays[i-1].refractedRayIntensity * recursiveRays[i].color;
+            }
+            gl_FragColor = vec4(mainRayColor + reflectionColor + refractionColor, 1.0);
+        }
+    </script>
+
+    <script id="fshader1" type="x-shader/x-fragment">
+        uniform mediump float lightx;
+        uniform mediump float lighty;
+        precision mediump float;
+        varying vec3 vPosition;
+
+        struct Sphere {
+            vec3 center;
+            float radius;
+            vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
+        };
+
+        struct Plane {
+            vec3 origin;
+            vec3 point;
+            vec3 normal;
+            vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
+        };
+
+        struct Ray {
+            vec3 origin;
+            vec3 direction;
+        };
+
+        struct Light {
+            vec3 position;
+            float ambience;
+            vec3 specular;
+            vec3 diffuse;
+        };
+
+        struct RayTracerOutput {
+            Ray reflectedRay;
+            float reflectedRayIntensity;
+            Ray refractedRay;
+            float refractedRayIntensity;
+            vec3 color;
+        };
+
+        Sphere spheres[4];
+        Ray rays[1];
+        Light light[1];
+        Plane planes[1];
+
+        void initialize() {
+            float x = vPosition.x;
+            float y = vPosition.y;
+            float z = vPosition.z;
+            float focalLength = 2.0;
+            vec3 color = vec3(0.0, 0.0, 0.0);
+
+            // Create spheres
+            spheres[0].center = vec3(0.42, 0.4, -1.0);// location of sphere
+            spheres[0].radius = 0.4;
+            spheres[0].color = vec3(1.0, 0.0, 0.0);// color red
+            spheres[0].refractiveInd = 1.01;
+            spheres[0].transparency = 0.0;
+            spheres[0].reflectiveness = 0.7;  // ambient, diffuse, specular, shinyness
+
+            spheres[1].center = vec3(-0.42, 0.4, -1.0);
+            spheres[1].radius = 0.4;
+            spheres[1].color = vec3(0.0, 0.0, 1.0);
+            spheres[1].refractiveInd = 1.1;
+            spheres[1].transparency = 0.0;
+            spheres[1].reflectiveness = 1.0;
+
+            planes[0].origin = vec3(0, 0, 0);
+            planes[0].normal = vec3(0, 1.0, 0);
+            planes[0].color = vec3(0.3, 0.5, 0.5);
+            planes[0].refractiveInd = 1.0;
+            planes[0].reflectiveness = 1.0;
+            planes[0].transparency = 0.0;
+
+            // Create ray
+            rays[0].origin = vec3(lightx, lighty, focalLength);// emission point is the same distance back as the focal
+            // length
+            rays[0].direction = normalize(vec3(x, y, -focalLength));// the direction will be in the direction of this
+            // specific pixel we're looking at
+
+            // Create Light source
+            light[0].position = vec3(-2.0, 2.0, -2.0);
+            light[0].ambience = 0.4;
+            light[0].specular = vec3(1,1,1);
+        }
+
+        float checkIntersectSphere(Sphere sphere, Ray ray) {
+
+            vec3 distanceFromCenter = (ray.origin - sphere.center);
+            float B = 2.0 * dot(ray.direction, distanceFromCenter);
+            float C = dot(distanceFromCenter, distanceFromCenter) - pow(sphere.radius, 2.0);
+            float delta = pow(B, 2.0) - 4.0 * C;
+            float t = 0.0;
+            if (delta > 0.0) { // i know i have an intersection
+                float sqRoot = sqrt(delta);
+                float t1 = (-B + sqRoot) / 2.0;
+                float t2 = (-B - sqRoot) / 2.0;
+                t = min(t1, t2);
+            }
+            if (delta == 0.0) {
+                t = -B / 2.0;
+            }
+
+            return t;
+        }
+
+        float checkIntersectPlane(Plane plane, Ray ray) {
+            float t = 0.0;
+
+            float divisor = dot(ray.direction, plane.normal);
+            if (divisor != 0.0) {
+                t = dot(plane.origin - ray.origin, plane.normal) / divisor;
+            }
+
+            return t;
+        }
+
+        RayTracerOutput getRay(Ray ray, Light light) {
+            const vec3 white = vec3(1, 1, 1);
+
+            const float veryLargeNumber = 100000.0;
+            const int numOfSpheres = 2;
+            const int numOfPlanes = 1;
+            RayTracerOutput rayTracer;
+            Sphere sphereToShow;
+            Plane planeToShow;
+            vec3 color = vec3(0.0, 0.0, 0.0);
+            float minTSphere = veryLargeNumber;
+            float minTPlane = veryLargeNumber;
+
+            // calculate which object is being shown
+            for (int i=0; i < numOfSpheres; i++) { // go through all spheres, determine which one is on top
+                float tSphere = 0.0;
+                tSphere = checkIntersectSphere(spheres[i], ray);
+                if (tSphere > 0.0 && tSphere < minTSphere) {
+                    minTSphere = tSphere;
+                    sphereToShow = spheres[i];
+                }
+            }
+            for (int i=0; i < numOfPlanes; i++) { // go through all planes, determine which one is on top
+                float tPlane = 0.0;
+                tPlane = checkIntersectPlane(planes[i], ray);
+                if (tPlane > 0.0 && tPlane < minTPlane) {
+                    minTPlane = tPlane;
+                    planeToShow = planes[i];
+                }
+            }
+
+            bool drawSphere = minTSphere < minTPlane;
+            float minT = drawSphere ? minTSphere : minTPlane;
+
+            // calculate if an object is blocking
+            float minTFromLight = veryLargeNumber;
+            Ray lightRay;
+            lightRay.origin = light.position;
+            lightRay.direction = normalize((ray.origin + minT * ray.direction) - light.position);
+            float tOfPointFromLightSource = drawSphere ? checkIntersectSphere(sphereToShow, lightRay) : checkIntersectPlane(planeToShow, lightRay);
+
+            // clculate minT for any spheres or
+            for (int i=0; i < numOfSpheres; i++) { // go through all spheres, determine which one is on top
+                float tSphere = 0.0;
+                tSphere = checkIntersectSphere(spheres[i], lightRay);
+                if (tSphere > 0.0 && tSphere < minTFromLight) {
+                    minTFromLight = tSphere;
+                }
+            }
+            for (int i=0; i < numOfPlanes; i++) { // go through all planes, determine which one is on top
+                float tPlane = 0.0;
+                tPlane = checkIntersectPlane(planes[i], lightRay);
+                if (tPlane > 0.0 && tPlane < minTFromLight) {
+                    minTFromLight = tPlane;
+                }
+            }
+
+            bool objectIsInShadow = minTFromLight < tOfPointFromLightSource; // determine if object is in shadow
+
+            vec3 lightSource = light.position;
+            float ambience = light.ambience;
+            Ray reflectionRay;
+            Ray refractionRay;
+
+            vec3 surfacePoint = ray.origin + (minT * ray.direction);;
+            vec3 surfaceNormal;
+
+            float refrInd = 1.0;
+            float reflectivity = 0.0;
+            float transparency = 0.0;
+
+            if (minT > 0.0 && minT < veryLargeNumber) {
+
+                if (drawSphere) {
+                    refrInd = sphereToShow.refractiveInd;
+                    reflectivity = sphereToShow.reflectiveness;
+                    transparency = sphereToShow.transparency;
+
+                    surfaceNormal = normalize(surfacePoint - sphereToShow.center);
+                    if (
+                    objectIsInShadow) {
+                        color = sphereToShow.color * ambience; }
+                    else {
+                        float dotProduct = dot(surfaceNormal, lightSource);
+                        color = sphereToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(-surfaceNormal, lightRay.direction))));
+                    }
+                }
+                else { // if drawing a plane
+                    refrInd = planeToShow.refractiveInd;
+                    reflectivity = planeToShow.reflectiveness;
+                    transparency = planeToShow.transparency;
+
+                    surfaceNormal = normalize(planeToShow.normal);
+                    if (objectIsInShadow) {
+                        color = planeToShow.color * ambience; }
+                    else {
+                        color = planeToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(surfaceNormal, lightSource)))); }
+                }
+
+                vec3 reflection = reflect(ray.direction, surfaceNormal);
+                reflectionRay.origin = surfacePoint + 0.0001 * surfaceNormal;
+                reflectionRay.direction = reflection;
+                rayTracer.reflectedRay = reflectionRay;
+                // the intensity depends on the reflectivity of the material AND the angle the ray is hitting the surface
+                rayTracer.reflectedRayIntensity = reflectivity * max(dot(ray.direction, -surfaceNormal), 0.0);
+
+
+                // specular highlight (only for sphere)
+                if (!objectIsInShadow && drawSphere) {
+                    float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
+                    vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
+                    color += specular * reflectivity;}
+
+                vec3 refraction = refract(ray.direction, surfaceNormal, 1.0 / refrInd);
+                refractionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
+                refractionRay.direction = refraction;
+                rayTracer.refractedRay = refractionRay;
+                rayTracer.refractedRayIntensity = transparency;
+
+                rayTracer.color = color;
+
+            }
+            else {
+                rayTracer.color = color;
+            }
+
+            return rayTracer;
+        }
+
+        void main() {
+//            const int reflectionDepth = 60;
+            const int reflectionDepth = 5;
+
+            initialize();
+
+            vec3 reflectionColor = vec3(0, 0, 0);
+            vec3 refractionColor = vec3(0, 0, 0);
+            vec3 mainRayColor;
+
+            // set main ray
+            RayTracerOutput recursiveRays[reflectionDepth];
+            recursiveRays[0] = getRay(rays[0], light[0]);
+            mainRayColor = recursiveRays[0].color;
+
+            for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
+//                reflectionColor += recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+                reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i].reflectedRayIntensity;
+            }
+            for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
+                refractionColor += recursiveRays[i-1].refractedRayIntensity * recursiveRays[i].color;
+            }
+            gl_FragColor = vec4(mainRayColor + reflectionColor +  refractionColor, 1.0);
+        }
+    </script>
+
+    <script id="fshader3" type="x-shader/x-fragment">
+        uniform mediump float lightx;
+        uniform mediump float lighty;
+        precision mediump float;
+        varying vec3 vPosition;
+
+        struct Sphere {
+            vec3 center;
+            float radius;
+            vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
+        };
+
+        struct Plane {
+            vec3 origin;
+            vec3 point;
+            vec3 normal;
+            vec3 color;
+            float refractiveInd;
+            float transparency;
+            float reflectiveness;
+        };
+
+        struct Ray {
+            vec3 origin;
+            vec3 direction;
+        };
+
+        struct Light {
+            vec3 position;
+            float ambience;
+            vec3 specular;
+            vec3 diffuse;
+        };
+
+        struct RayTracerOutput {
+            Ray reflectedRay;
+            float reflectedRayIntensity;
+            Ray refractedRay;
+            float refractedRayIntensity;
+            vec3 color;
+        };
+
+        Sphere spheres[4];
+        Ray rays[1];
+        Light light[1];
+        Plane planes[5];
+
+        void initialize() {
+            float x = vPosition.x;
+            float y = vPosition.y;
+            float z = vPosition.z;
+            float focalLength = 0.8;
+            vec3 color = vec3(0.0, 0.0, 0.0);
+
+            // Create spheres
+            spheres[0].center = vec3(-0.02, 0.4, -1.5);// location of sphere
+            spheres[0].radius = 0.4;
+            spheres[0].color = vec3(1.0, 0.0, 0.0);// color red
+            spheres[0].refractiveInd = 1.01;
+            spheres[0].transparency = 0.0;
+            spheres[0].reflectiveness = 0.0;  // ambient, diffuse, specular, shinyness
+
+            spheres[1].center = vec3(-1.3, 0.4, -1.5);
+            spheres[1].radius = 0.4;
+            spheres[1].color = vec3(0.0, 0.0, 0.0);
+            spheres[1].refractiveInd = 1.1;
+            spheres[1].transparency = 0.0;
+            spheres[1].reflectiveness = 1.0;
+
+            spheres[2].center = vec3(1, 0.4, -1.0);
+            spheres[2].radius = 0.4;
+            spheres[2].color = vec3(0.0, 1.0, 0.0);
+            spheres[2].refractiveInd = 1.08;
+            spheres[2].transparency = 0.7;
+            spheres[2].reflectiveness = 0.0;
+
+            planes[0].origin = vec3(0, 0, 0); // bottom
+            planes[0].normal = vec3(0, 1.0, 0);
+            planes[0].color = vec3(0.2, 0.2, 1.0);
+            planes[0].refractiveInd = 1.0;
+            planes[0].reflectiveness = 0.0;
+            planes[0].transparency = 0.0;
+
+            planes[1].origin = vec3(0.0, 2.5, 0.0); // top
+            planes[1].normal = vec3(0.0, -1.0, 0.0);
+            planes[1].color = vec3(1.0, 0.2, 0.6);
+            planes[1].refractiveInd = 1.0;
+            planes[1].reflectiveness = 0.0;
+            planes[1].transparency = 0.0;
+
+            planes[2].origin = vec3(-2, 0.0, 0.0); // left side
+            planes[2].normal = vec3(1.0, 0.0, 0);
+            planes[2].color = vec3(0.2, 0.8, 1.0);
+            planes[2].refractiveInd = 1.0;
+            planes[2].reflectiveness = 0.0;
+            planes[2].transparency = 0.0;
+
+            planes[3].origin = vec3(2.0, 0.0, 0.0); // right side
+            planes[3].normal = vec3(-1.0, 0.0, 0.0);
+            planes[3].color = vec3(0.2, 1.0, 0.2);
+            planes[3].refractiveInd = 1.0;
+            planes[3].reflectiveness = 0.0;
+            planes[3].transparency = 0.0;
+
+            planes[4].origin = vec3(0.0, 0.0, -3.0); // back
+            planes[4].normal = vec3(0.0, 0.0, 1.0);
+            planes[4].color = vec3(1.0, 1.0, 0.2);
+            planes[4].refractiveInd = 1.0;
+            planes[4].reflectiveness = 0.0;
+            planes[4].transparency = 0.0;
+
+            // Create ray
+            rays[0].origin = vec3(lightx, lighty, focalLength);// emission point is the same distance back as the focal
+            // length
+            rays[0].direction = normalize(vec3(x, y, -focalLength));// the direction will be in the direction of this
+            // specific pixel we're looking at
+
+            // Create Light source
+            light[0].position = vec3(0.0, 1.5, -1.0);
+            light[0].ambience = 0.4;
+            light[0].specular = vec3(1,1,1);
+        }
+
+        float checkIntersectSphere(Sphere sphere, Ray ray) {
+
+            vec3 distanceFromCenter = (ray.origin - sphere.center);
+            float B = 2.0 * dot(ray.direction, distanceFromCenter);
+            float C = dot(distanceFromCenter, distanceFromCenter) - pow(sphere.radius, 2.0);
+            float delta = pow(B, 2.0) - 4.0 * C;
+            float t = 0.0;
+            if (delta > 0.0) { // i know i have an intersection
+                float sqRoot = sqrt(delta);
+                float t1 = (-B + sqRoot) / 2.0;
+                float t2 = (-B - sqRoot) / 2.0;
+                t = min(t1, t2);
+            }
+            if (delta == 0.0) {
+                t = -B / 2.0;
+            }
+
+            return t;
+        }
+
+        float checkIntersectPlane(Plane plane, Ray ray) {
+            float t = 0.0;
+
+            float divisor = dot(ray.direction, plane.normal);
+            if (divisor != 0.0) {
+                t = dot(plane.origin - ray.origin, plane.normal) / divisor;
+            }
+
+            return t;
+        }
+
+        RayTracerOutput getRay(Ray ray, Light light) {
+            const vec3 white = vec3(1, 1, 1);
+
+            const float veryLargeNumber = 100000.0;
+            const int numOfSpheres = 3;
+            const int numOfPlanes = 5;
+            RayTracerOutput rayTracer;
+            Sphere sphereToShow;
+            Plane planeToShow;
+            vec3 color = vec3(0.0, 0.0, 0.0);
+            float minTSphere = veryLargeNumber;
+            float minTPlane = veryLargeNumber;
+
+            // calculate which object is being shown
+            for (int i=0; i < numOfSpheres; i++) { // go through all spheres, determine which one is on top
+                float tSphere = 0.0;
+                tSphere = checkIntersectSphere(spheres[i], ray);
+                if (tSphere > 0.0 && tSphere < minTSphere) {
+                    minTSphere = tSphere;
+                    sphereToShow = spheres[i];
+                }
+            }
+            for (int i=0; i < numOfPlanes; i++) { // go through all planes, determine which one is on top
+                float tPlane = 0.0;
+                tPlane = checkIntersectPlane(planes[i], ray);
+                if (tPlane > 0.0 && tPlane < minTPlane) {
+                    minTPlane = tPlane;
+                    planeToShow = planes[i];
+                }
+            }
+
+            bool drawSphere = minTSphere < minTPlane;
+            float minT = drawSphere ? minTSphere : minTPlane;
+
+            // calculate if an object is blocking
+            float minTFromLight = veryLargeNumber;
+            Ray lightRay;
+            lightRay.origin = light.position;
+            lightRay.direction = normalize((ray.origin + minT * ray.direction) - light.position);
+            float tOfPointFromLightSource = drawSphere ? checkIntersectSphere(sphereToShow, lightRay) : checkIntersectPlane(planeToShow, lightRay);
+
+            // calculate if a sphere is blocking
+            for (int i=0; i < numOfSpheres; i++) { // go through all spheres
+                float tSphere = 0.0;
+                tSphere = checkIntersectSphere(spheres[i], lightRay);
+                if (tSphere > 0.0 && tSphere < minTFromLight) {
+                    minTFromLight = tSphere;
+                }
+            }
+            for (int i=0; i < numOfPlanes; i++) { // go through all planes
+                float tPlane = 0.0;
+                tPlane = checkIntersectPlane(planes[i], lightRay);
+                if (tPlane > 0.0 && tPlane < minTFromLight) {
+                    minTFromLight = tPlane;
+                }
+            }
+
+            bool objectIsInShadow = minTFromLight < tOfPointFromLightSource; // determine if object is in shadow
+
+            vec3 lightSource = light.position;
+            float ambience = light.ambience;
+            Ray reflectionRay;
+            Ray refractionRay;
+
+            vec3 surfacePoint = ray.origin + (minT * ray.direction);;
+            vec3 surfaceNormal;
+
+            float refrInd = 1.0;
+            float reflectivity = 0.0;
+            float transparency = 0.0;
+
+            if (minT > 0.0 && minT < veryLargeNumber) {
+
+                if (drawSphere) {
+                    refrInd = sphereToShow.refractiveInd;
+                    reflectivity = sphereToShow.reflectiveness;
+                    transparency = sphereToShow.transparency;
+
+                    surfaceNormal = normalize(surfacePoint - sphereToShow.center);
+                    if (objectIsInShadow) {
+                        color = sphereToShow.color * ambience; }
+                    else {
+                        float dotProduct = dot(surfaceNormal, lightSource);
+                        color = sphereToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(-surfaceNormal, lightRay.direction))));
+                    }
+                }
+                else { // if drawing a plane
+                    refrInd = planeToShow.refractiveInd;
+                    reflectivity = planeToShow.reflectiveness;
+                    transparency = planeToShow.transparency;
+
+                    surfaceNormal = normalize(planeToShow.normal);
+                    if (objectIsInShadow) {
+                        color = planeToShow.color * ambience; }
+                    else {
+                        color = planeToShow.color * (ambience + ((1.0 - ambience) * max(0.0, dot(-surfaceNormal, lightRay.direction)))); }
+                }
+
+                vec3 reflection = reflect(ray.direction, surfaceNormal);
+                reflectionRay.origin = surfacePoint + 0.0001 * surfaceNormal;
+                reflectionRay.direction = reflection;
+                rayTracer.reflectedRay = reflectionRay;
+                // the intensity depends on the reflectivity of the material AND the angle the ray is hitting the surface
+                rayTracer.reflectedRayIntensity = reflectivity;
+
+
+                // specular highlight (only for sphere)
+                if (!objectIsInShadow && drawSphere) {
+                    float Ks = pow(max(dot(lightRay.direction, -reflection), 0.0), 10.0);
+                    vec3 specular = Ks * vec3(1.0, 1.0, 1.0);
+                    color += specular * reflectivity;}
+
+                vec3 refraction = refract(ray.direction, surfaceNormal, 1.0 / refrInd);
+                refractionRay.origin = surfacePoint - 0.0001 * surfaceNormal;
+                refractionRay.direction = refraction;
+                rayTracer.refractedRay = refractionRay;
+                rayTracer.refractedRayIntensity = transparency;
+
+                rayTracer.color = color;
+
+            }
+            else {
+                rayTracer.color = color;
+            }
+
+            return rayTracer;
+        }
+
+        void main() {
+            //            const int reflectionDepth = 60;
+            const int reflectionDepth = 2;
+
+            initialize();
+
+            vec3 reflectionColor = vec3(0, 0, 0);
+            vec3 refractionColor = vec3(0, 0, 0);
+            vec3 mainRayColor;
+
+            // set main ray
+            RayTracerOutput recursiveRays[reflectionDepth];
+            recursiveRays[0] = getRay(rays[0], light[0]);
+            mainRayColor = recursiveRays[0].color;
+
+            for (int i = 1; i < reflectionDepth; i++) { // go through every reflected ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].reflectedRay, light[0]);
+                 reflectionColor += recursiveRays[i].color * recursiveRays[i-1].reflectedRayIntensity;
+//                reflectionColor += recursiveRays[i-1].color * recursiveRays[i].color * recursiveRays[i-1].reflectedRayIntensity;
+            }
+            for (int i = 1; i < reflectionDepth; i++) { // go through every refracted ray at each pixel
+                recursiveRays[i] = getRay(recursiveRays[i-1].refractedRay, light[0]);
+                refractionColor += recursiveRays[i-1].refractedRayIntensity * recursiveRays[i].color;
+            }
+            gl_FragColor = vec4(mainRayColor + reflectionColor + refractionColor, 1.0);
+        }
+    </script>
 
     <script src="lib/webgl-utils.js"></script>
     <script src="lib/initShaders.js"></script>
@@ -183,7 +901,9 @@
 
 <body onload="main()">
 
-<canvas id="webgl" width="700" height="700">
+<h2>WebGL Ray Tracer. Please use keys 1, 2 and 3 to switch between images.</h2>
+
+<canvas height="600" id="webgl" width="600">
     Please use a browser that supports the "canvas" tag.
 </canvas>
 
